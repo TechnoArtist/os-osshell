@@ -11,7 +11,8 @@ BINDIR= bin
 OBJS= $(addprefix $(OBJDIR)/, osshell.o)
 EXEC= $(addprefix $(BINDIR)/, osshell)
 
-mkdirs:= $(shell mkdir -p $(OBJDIR) $(BINDIR))
+#Note: swapped obj and bin
+mkdirs:= $(shell mkdir -p $(OBJDIR) $(BINDIR)) 
 
 # BUILD EVERYTHING
 all: $(EXEC)

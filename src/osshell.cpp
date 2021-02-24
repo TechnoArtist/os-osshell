@@ -9,6 +9,7 @@
 void allocateArrayOfCharArrays(char ***array_ptr, size_t array_length, size_t item_size);
 void freeArrayOfCharArrays(char **array, size_t array_length);
 void splitString(std::string text, char d, char **result);
+void recordCommand(std::string* command, char** command_list, int* counter); 
 
 int main (int argc, char **argv)
 {
@@ -47,6 +48,61 @@ int main (int argc, char **argv)
     //  For all other commands, check if an executable by that name is in one of the PATH directories
     //   If yes, execute it
     //   If no, print error statement: "<command_name>: Error command not found" (do include newline)
+    
+    int currentCommand = 0; 
+    bool running = true; 
+    while (running) {
+    	/*
+    	Recommended using the cis/stat library when checking if a file is available
+    	this will allow `struct stat;` to query file vs dir, rwx perms, etc (linux specific)
+    	Or std::filesystem
+    	But this is 2017 std, and makefile is setting to 2011 (-std=c++11); would need to edit
+    	Takes in string, can check "does this exist?" and if exists, "exec perms?"
+    	*/
+    	
+    	//Make command var
+    	std::string command; 
+    	char* command_parts; 
+    	
+    	printf("Made command var\n"); 
+    	
+    	//Prompt and retrieve user input
+    	printf("osshell> "); 
+		std::getline(std::cin, command); 
+		
+		
+    	//TODO use the splitString() method given by teacher, it's a delimiter splitter
+    	//gives back a null-terminated list of strings in given char**
+    	
+    	printf("\nPrompted, recieved input\n"); 
+    	
+    	//splitString(command, ' ', &command_parts); 
+    	
+    	//printf("Split the string\n"); 
+    	
+    	std::cout << "[" << command << "]" << std::endl; 
+    	
+    	recordCommand(&command, command_list, &currentCommand); //TODO make this method, or write it here
+    	
+    	if(command == "exit") {
+    		printf("exiting..."); 
+    		running = false; 
+    	} else if (command == "") {
+    		//Do nothing, reprompt
+    	} else if (command == "history") { //TODO split stringing
+    		//TODO print (or clear) history up to 128 (or X)
+    		
+    		//printing command_list
+    		
+    		
+    	} else {
+    		//TODO search for executable; PATH, or ., or /
+    		//Remember to thread this, carefully
+    	}
+    	
+    	printf("Made it through one loop\n"); 
+    	
+    }
 
     // Free allocated memory
     freeArrayOfCharArrays(os_path_list, 16);
@@ -91,15 +147,52 @@ void freeArrayOfCharArrays(char **array, size_t array_length)
 */
 void splitString(std::string text, char d, char **result)
 {
+	enum states { NONE, IN_WORD, IN_STRING } state = NONE; 
+	
     int i;
     std::vector<std::string> list;
-    std::stringstream ss(text);
     std::string token;
     
-    while (std::getline(ss, token, d))
-    {
-        list.push_back(token);
+    for(i = 0; i < text.length(); i++) {
+    	char c = text[i]; 
+    	switch (state) {
+    		case NONE: 
+    			if (c != d) {
+					if (c == '\"') {
+						state = IN_STRING; 
+						token = ""; 
+					}
+					else {
+						state = IN_WORD; 
+						token = c; 
+					}
+				}
+				break; 
+				
+    		case IN_WORD: 
+    			if (c == d) {
+    				list.push_back(token); 
+    				state = NONE; 
+    			}
+    			else {
+    				token += c; 
+    			}
+    			break; 
+    			
+    		case IN_STRING: 
+    			if (c == '\"') {
+    				list.push_back(token); 
+    				state = NONE; 
+    			}
+    			else {
+    				token += c; 
+    			}
+    			break; 
+    	}
     }
+    if (state != NONE) {
+    	list.push_back(token); 
+    } 
 
     for (i = 0; i < list.size(); i++)
     {
@@ -107,3 +200,14 @@ void splitString(std::string text, char d, char **result)
     }
     result[list.size()] = NULL;
 }
+
+void recordCommand(std::string* command, char** command_list, int* counter) {
+	
+	strcpy(command_list[*counter], command->c_str()); 
+	
+	//TODO in the printHistory, check if null, then loop until _
+	
+	*(counter) = (*(counter) + 1) % 32; 
+}
+
+
