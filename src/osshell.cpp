@@ -90,7 +90,7 @@ int main (int argc, char **argv)
 		history_counter = (history_counter + 1) % 128;
 		
 		printf("Recording command...\n");
-		command_history[history_counter] = command; 
+		//command_history[history_counter] = command; 
 		//TODO make sure this passes only the data
 		
 		printf("Processing command...\n");
@@ -119,6 +119,7 @@ int main (int argc, char **argv)
 			} else {
 				if (command_list_exec[1] != NULL) {
 				//TODO check if number, then try to set that number as the limit
+                }
 			}
 			
 			
@@ -126,7 +127,7 @@ int main (int argc, char **argv)
 			
 			//loops in a circle, starting at counter, until either null or limit
 			for(int i = 0; i < limit && command_history[(i+history_counter)%128] != NULL; i++) {
-				printf("%s\n", command_history[(i+history_counter)%128]; 
+				printf("%s\n", command_history[(i+history_counter)%128]); 
 			}
 			
 		} else {
