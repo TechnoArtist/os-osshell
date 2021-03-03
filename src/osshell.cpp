@@ -6,39 +6,43 @@
 #include <vector>
 #include <unistd.h>
 
-void allocateArrayOfCharArrays(char ***array_ptr, size_t array_length, size_t item_size);
+void splitString(std::string text, char d, std::vector<std::string>& result);
+void vectorOfStringsToArrayOfCharArrays(std::vector<std::string>& list, char ***result);
 void freeArrayOfCharArrays(char **array, size_t array_length);
-void splitString(std::string text, char d, char **result);
-void recordCommand(std::string* command, char** command_list, int* counter); 
+void recordCommand(std::string command, std::vector<std::string>& history, int* counter); 
 
 int main (int argc, char **argv)
 {
     // Get list of paths to binary executables
-    // `os_path_list` supports up to 16 directories in PATH, 
-    //     each with a directory name length of up to 64 characters
-    char **os_path_list;
-    allocateArrayOfCharArrays(&os_path_list, 16, 64);
+    std::vector<std::string> os_path_list;
     char* os_path = getenv("PATH");
     splitString(os_path, ':', os_path_list);
 
-
-    // Example code for how to loop over NULL terminated list of strings
-    int i = 0;
-    while (os_path_list[i] != NULL)
+    
+    /************************************************************************************
+     *   Example code - remove in actual program                                        *
+     ************************************************************************************/
+    // Shows how to loop over the directories in the PATH environment variable
+    
+    int i;
+    for (i = 0; i < os_path_list.size(); i++)
     {
-        printf("PATH[%2d]: %s\n", i, os_path_list[i]);
-        i++;
+        printf("PATH[%2d]: %s\n", i, os_path_list[i].c_str());
     }
+    
+    /************************************************************************************
+     *   End example code                                                               *
+     ************************************************************************************/
 
 
     // Welcome message
     printf("Welcome to OSShell! Please enter your commands ('exit' to quit).\n");
 
-    // Allocate space for input command lists
-    // `command_list` supports up to 32 command line parameters, 
-    //     each with a parameter string length of up to 128 characters
-    char **command_list;
-    allocateArrayOfCharArrays(&command_list, 32, 128);
+    std::vector<std::string> command_list; // to store command user types in, split into its variour parameters
+    char **command_list_exec; // command_list converted to an array of character arrays
+    char **command_history; 
+    int history_counter = 0;
+
 
     // Repeat:
     //  Print prompt for user input: "osshell> " (no newline)
@@ -48,8 +52,7 @@ int main (int argc, char **argv)
     //  For all other commands, check if an executable by that name is in one of the PATH directories
     //   If yes, execute it
     //   If no, print error statement: "<command_name>: Error command not found" (do include newline)
-    
-    int currentCommand = 0; 
+
     bool running = true; 
     while (running) {
     	/*
@@ -59,75 +62,229 @@ int main (int argc, char **argv)
     	But this is 2017 std, and makefile is setting to 2011 (-std=c++11); would need to edit
     	Takes in string, can check "does this exist?" and if exists, "exec perms?"
     	*/
-    	
-    	//Make command var
-    	std::string command; 
-    	char* command_parts; 
-    	
-    	printf("Made command var\n"); 
-    	
-    	//Prompt and retrieve user input
-    	printf("osshell> "); 
+		
+		printf("Making command var...\n"); \
+		std::string command; 
+		
+		printf("Prompting for input...\n"); 
+		printf("osshell> "); 
 		std::getline(std::cin, command); 
 		
+		printf("Splitting string...\n"); 
+		splitString(command, ' ', command_list); 
+		//gives back a null-terminated list of strings in given char**
+		vectorOfStringsToArrayOfCharArrays(command_list, &command_list_exec);
+		//gives back an array of char*s
+		//TODO create command_history based on the creation of command_list_exec
 		
-    	//TODO use the splitString() method given by teacher, it's a delimiter splitter
-    	//gives back a null-terminated list of strings in given char**
-    	
-    	printf("\nPrompted, recieved input\n"); 
-    	
-    	//splitString(command, ' ', &command_parts); 
-    	
-    	//printf("Split the string\n"); 
-    	
-    	std::cout << "[" << command << "]" << std::endl; 
-    	
-    	recordCommand(&command, command_list, &currentCommand); //TODO make this method, or write it here
-    	
-    	if(command == "exit") {
-    		printf("exiting..."); 
-    		running = false; 
-    	} else if (command == "") {
-    		//Do nothing, reprompt
-    	} else if (command == "history") { //TODO split stringing
-    		//TODO print (or clear) history up to 128 (or X)
-    		
-    		//printing command_list
-    		
-    		
-    	} else {
-    		//TODO search for executable; PATH, or ., or /
-    		//Remember to thread this, carefully
-    	}
-    	
-    	printf("Made it through one loop\n"); 
-    	
-    }
+		//Echoing the (full and split) command...
+		std::cout << "[" << command << "]" << std::endl; 
+		i = 0;
+		while (command_list_exec[i] != NULL)
+		{
+			printf("CMD[%2d]: %s\n", i, command_list_exec[i]);
+			i++;
+		}
+		
+		printf("Incrementing counter...\n");
+		history_counter = (history_counter + 1) % 128;
+		
+		printf("Recording command...\n");
+		command_history[history_counter] = command; 
+		//TODO make sure this passes only the data
+		
+		printf("Processing command...\n");
+		
+		if(command == "") {
+			//Do nothing, reprompt
+			
+		} else if (command_list_exec[0] == "exit") {
+			printf("exiting..."); 
+			running = false; 
+			
+		} else if (command_list_exec[0] == "history") { 
+			//Print (or clear) history up to 128 (or X)
+			
+			
+			// Setting limit (how many entries to print), and if applicable, clearing history
+			
+			int limit = 128; 
+			if(command_list_exec[1] != NULL && strcmp(command_list_exec[1], "clear") == 0) {
+				//TODO clear history (counter to 0, history var reset)
+				//(still need to finish designing the history variable, command_history)
+				for(int i = 0; i < 128; i++) {
+					command_history[i] = NULL; 
+				}
+				int limit = 0; 
+			} else {
+				if (command_list_exec[1] != NULL) {
+				//TODO check if number, then try to set that number as the limit
+			}
+			
+			
+			// Limit obtained, printing command_list (limit is 0 if clearing)
+			
+			//loops in a circle, starting at counter, until either null or limit
+			for(int i = 0; i < limit && command_history[(i+history_counter)%128] != NULL; i++) {
+				printf("%s\n", command_history[(i+history_counter)%128]; 
+			}
+			
+		} else {
+			//continue; //WARNING doing "continue" skips everything left in this while loop. 
+			/*
+			//TODO search for executable; PATH, or ., or /
+			//See main method for an example of searching PATH
+			int i;
+			for (i = 0; i < os_path_list.size(); i++)
+			{
+				if(command == os_path_list[i].c_str());{
+					
+					int pid = fork();
+					
+					//Child Process (Thread)
+					if (pid == 0){
+					//Execute program
+					}
+					
+					
+				}
+				//printf("PATH[%2d]: %s\n", i, os_path_list[i].c_str());
+			}
+		
+			
+			//Remember to thread this, carefully
+			*/
+		}
+		
+		printf("Freeing memory for `command_list_exec`...\n"); 
+		freeArrayOfCharArrays(command_list_exec, command_list.size() + 1);
+		printf("------\n");
+		printf("Made it through one loop\n"); 
+		
+	}
 
-    // Free allocated memory
-    freeArrayOfCharArrays(os_path_list, 16);
-    freeArrayOfCharArrays(command_list, 32);
+    
+    /************************************************************************************
+     *   Example code - remove in actual program                                        *
+     ************************************************************************************/
+    /*
+    // Shows how to split a command and prepare for the execv() function
+    std::string example_command = "ls -lh";
+    splitString(example_command, ' ', command_list);
+    vectorOfStringsToArrayOfCharArrays(command_list, &command_list_exec);
+    // use `command_list_exec` in the execv() function rather than looping and printing
+    i = 0;
+    while (command_list_exec[i] != NULL)
+    {
+        printf("CMD[%2d]: %s\n", i, command_list_exec[i]);
+        i++;
+    }
+    // free memory for `command_list_exec`
+    freeArrayOfCharArrays(command_list_exec, command_list.size() + 1);
+    printf("------\n");
+
+    // Second example command - reuse the `command_list` and `command_list_exec` variables
+    example_command = "echo \"Hello world\" I am alive!";
+    splitString(example_command, ' ', command_list);
+    vectorOfStringsToArrayOfCharArrays(command_list, &command_list_exec);
+    // use `command_list_exec` in the execv() function rather than looping and printing
+    i = 0;
+    while (command_list_exec[i] != NULL)
+    {
+        printf("CMD[%2d]: %s\n", i, command_list_exec[i]);
+        i++;
+    }
+    // free memory for `command_list_exec`
+    freeArrayOfCharArrays(command_list_exec, command_list.size() + 1);
+    printf("------\n");
+    */
+    /************************************************************************************
+     *   End example code                                                               *
+     ************************************************************************************/
 
     return 0;
 }
 
 /*
-   array_ptr: pointer to list of strings to be allocated
-   array_length: number of strings to allocate space for in the list
-   item_size: length of each string to allocate space for
+   text: string to split
+   d: character delimiter to split `text` on
+   result: vector of strings - result will be stored here
 */
-void allocateArrayOfCharArrays(char ***array_ptr, size_t array_length, size_t item_size)
+void splitString(std::string text, char d, std::vector<std::string>& result)
 {
+    enum states { NONE, IN_WORD, IN_STRING } state = NONE;
+
     int i;
-    *array_ptr = new char*[array_length];
-    for (i = 0; i < array_length; i++)
+    std::string token;
+    result.clear();
+    for (i = 0; i < text.length(); i++)
     {
-        (*array_ptr)[i] = new char[item_size];
+        char c = text[i];
+        switch (state) {
+            case NONE:
+                if (c != d)
+                {
+                    if (c == '\"')
+                    {
+                        state = IN_STRING;
+                        token = "";
+                    }
+                    else
+                    {
+                        state = IN_WORD;
+                        token = c;
+                    }
+                }
+                break;
+            case IN_WORD:
+                if (c == d)
+                {
+                    result.push_back(token);
+                    state = NONE;
+                }
+                else
+                {
+                    token += c;
+                }
+                break;
+            case IN_STRING:
+                if (c == '\"')
+                {
+                    result.push_back(token);
+                    state = NONE;
+                }
+                else
+                {
+                    token += c;
+                }
+                break;
+        }
+    }
+    if (state != NONE)
+    {
+        result.push_back(token);
     }
 }
 
 /*
-   array: list of strings to be freed
+   list: vector of strings to convert to an array of character arrays
+   result: pointer to an array of character arrays when the vector of strings is copied to
+*/
+void vectorOfStringsToArrayOfCharArrays(std::vector<std::string>& list, char ***result)
+{
+    int i;
+    int result_length = list.size() + 1;
+    *result = new char*[result_length];
+    for (i = 0; i < list.size(); i++)
+    {
+        (*result)[i] = new char[list[i].length() + 1];
+        strcpy((*result)[i], list[i].c_str());
+    }
+    (*result)[list.size()] = NULL;
+}
+
+/*
+   array: list of strings (array of character arrays) to be freed
    array_length: number of strings in the list to free
 */
 void freeArrayOfCharArrays(char **array, size_t array_length)
@@ -135,79 +292,16 @@ void freeArrayOfCharArrays(char **array, size_t array_length)
     int i;
     for (i = 0; i < array_length; i++)
     {
-        delete[] array[i];
+        if (array[i] != NULL)
+        {
+            delete[] array[i];
+        }
     }
     delete[] array;
 }
 
-/*
-   text: string to split
-   d: character delimiter to split `text` on
-   result: NULL terminated list of strings (char **) - result will be stored here
-*/
-void splitString(std::string text, char d, char **result)
-{
-	enum states { NONE, IN_WORD, IN_STRING } state = NONE; 
-	
-    int i;
-    std::vector<std::string> list;
-    std::string token;
-    
-    for(i = 0; i < text.length(); i++) {
-    	char c = text[i]; 
-    	switch (state) {
-    		case NONE: 
-    			if (c != d) {
-					if (c == '\"') {
-						state = IN_STRING; 
-						token = ""; 
-					}
-					else {
-						state = IN_WORD; 
-						token = c; 
-					}
-				}
-				break; 
-				
-    		case IN_WORD: 
-    			if (c == d) {
-    				list.push_back(token); 
-    				state = NONE; 
-    			}
-    			else {
-    				token += c; 
-    			}
-    			break; 
-    			
-    		case IN_STRING: 
-    			if (c == '\"') {
-    				list.push_back(token); 
-    				state = NONE; 
-    			}
-    			else {
-    				token += c; 
-    			}
-    			break; 
-    	}
-    }
-    if (state != NONE) {
-    	list.push_back(token); 
-    } 
 
-    for (i = 0; i < list.size(); i++)
-    {
-        strcpy(result[i], list[i].c_str());
-    }
-    result[list.size()] = NULL;
-}
 
-void recordCommand(std::string* command, char** command_list, int* counter) {
-	
-	strcpy(command_list[*counter], command->c_str()); 
-	
-	//TODO in the printHistory, check if null, then loop until _
-	
-	*(counter) = (*(counter) + 1) % 32; 
-}
+
 
 
