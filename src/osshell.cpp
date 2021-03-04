@@ -5,6 +5,9 @@
 #include <sstream>
 #include <vector>
 #include <unistd.h>
+#include <sys/stat.h>
+#include <thread>
+#include <sys/wait.h>
 
 void splitString(std::string text, char d, std::vector<std::string>& result);
 void vectorOfStringsToArrayOfCharArrays(std::vector<std::string>& list, char ***result);
@@ -23,13 +26,13 @@ int main (int argc, char **argv)
      *   Example code - remove in actual program                                        *
      ************************************************************************************/
     // Shows how to loop over the directories in the PATH environment variable
-    
+    /*
     int i;
     for (i = 0; i < os_path_list.size(); i++)
     {
         printf("PATH[%2d]: %s\n", i, os_path_list[i].c_str());
     }
-    
+    */
     /************************************************************************************
      *   End example code                                                               *
      ************************************************************************************/
@@ -63,14 +66,15 @@ int main (int argc, char **argv)
     	Takes in string, can check "does this exist?" and if exists, "exec perms?"
     	*/
 		
-		printf("Making command var...\n"); \
+		//printf("Making command var...\n"); 
 		std::string command; 
+        std::string first_command;
 		
-		printf("Prompting for input...\n"); 
+		//printf("Prompting for input...\n"); 
 		printf("osshell> "); 
 		std::getline(std::cin, command); 
 		
-		printf("Splitting string...\n"); 
+		//printf("Splitting string...\n"); 
 		splitString(command, ' ', command_list); 
 		//gives back a null-terminated list of strings in given char**
 		vectorOfStringsToArrayOfCharArrays(command_list, &command_list_exec);
@@ -79,33 +83,32 @@ int main (int argc, char **argv)
 		
 		//Echoing the (full and split) command...
 		std::cout << "[" << command << "]" << std::endl; 
-		i = 0;
+		int i = 0;
 		while (command_list_exec[i] != NULL)
 		{
 			printf("CMD[%2d]: %s\n", i, command_list_exec[i]);
 			i++;
 		}
 		
-		printf("Incrementing counter...\n");
+		//printf("Incrementing counter...\n");
 		history_counter = (history_counter + 1) % 128;
 		
-		printf("Recording command...\n");
+		//printf("Recording command...\n");
 		//command_history[history_counter] = command; 
 		//TODO make sure this passes only the data
 		
-		printf("Processing command...\n");
+		//printf("Processing command...\n");
 		
+        first_command = command_list_exec[0];
 		if(command == "") {
 			//Do nothing, reprompt
 			
-		} else if (command_list_exec[0] == "exit") {
-			printf("exiting..."); 
-			running = false; 
+		} else if (first_command == "exit") {
+			exit(1);
 			
-		} else if (command_list_exec[0] == "history") { 
+		} else if (first_command == "history") { 
 			//Print (or clear) history up to 128 (or X)
-			
-			
+						
 			// Setting limit (how many entries to print), and if applicable, clearing history
 			
 			int limit = 128; 
@@ -122,9 +125,7 @@ int main (int argc, char **argv)
                 }
 			}
 			
-			
 			// Limit obtained, printing command_list (limit is 0 if clearing)
-			
 			//loops in a circle, starting at counter, until either null or limit
 			for(int i = 0; i < limit && command_history[(i+history_counter)%128] != NULL; i++) {
 				printf("%s\n", command_history[(i+history_counter)%128]); 
@@ -132,36 +133,43 @@ int main (int argc, char **argv)
 			
 		} else {
 			//continue; //WARNING doing "continue" skips everything left in this while loop. 
-			/*
 			//TODO search for executable; PATH, or ., or /
 			//See main method for an example of searching PATH
 			int i;
+            int done = 0;
 			for (i = 0; i < os_path_list.size(); i++)
 			{
-				if(command == os_path_list[i].c_str());{
-					
+                struct stat buf;
+                std::string pathloc = os_path_list[i];
+                pathloc += ("/" + first_command);
+                //std::cout << pathloc << std::endl;
+				if(stat(pathloc.c_str(), &buf) == 0 && done == 0){
+                    printf("Inside Path Loop!\n");
 					int pid = fork();
-					
+
 					//Child Process (Thread)
 					if (pid == 0){
-					//Execute program
+					    //Execute program
+                        execv(pathloc.c_str(), command_list_exec);                  
 					}
-					
-					
+
+                    //Parent
+                    else{
+                        int status;
+                        waitpid(pid, &status, 0);
+                        done = 1;
+                    }    
 				}
-				//printf("PATH[%2d]: %s\n", i, os_path_list[i].c_str());
+                else if(i == os_path_list.size() - 1 && done == 0){
+                    std::cout << command << ": Error command not found" << std::endl;
+                }
 			}
-		
-			
-			//Remember to thread this, carefully
-			*/
 		}
 		
 		printf("Freeing memory for `command_list_exec`...\n"); 
 		freeArrayOfCharArrays(command_list_exec, command_list.size() + 1);
 		printf("------\n");
 		printf("Made it through one loop\n"); 
-		
 	}
 
     
