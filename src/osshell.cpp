@@ -26,13 +26,13 @@ int main (int argc, char **argv)
      *   Example code - remove in actual program                                        *
      ************************************************************************************/
     // Shows how to loop over the directories in the PATH environment variable
-    /*
+    
     int i;
     for (i = 0; i < os_path_list.size(); i++)
     {
         printf("PATH[%2d]: %s\n", i, os_path_list[i].c_str());
     }
-    */
+    
     /************************************************************************************
      *   End example code                                                               *
      ************************************************************************************/
@@ -137,7 +137,31 @@ int main (int argc, char **argv)
 				printf("%s\n", command_history[(i+history_counter)%128]); 
 			}
 			
-		} else {
+		} else if (command.front() == '.' || command.front() == '/') {
+            struct stat buffer;
+            std::string commandLoc = first_command;
+            //printf("Hello, I am inside the confidtional!\n");
+            if(stat(command.c_str(), &buffer) == 0){
+                    printf("Inside Path Loop!\n");
+					int pid = fork();
+
+					//Child Process (Thread)
+					if (pid == 0){
+					    //Execute program
+                        execv(command.c_str(), command_list_exec);                  
+					}
+
+                    //Parent
+                    else{
+                        int status;
+                        waitpid(pid, &status, 0);
+                    }    
+				}
+            else{
+                std::cout << command << ": Error command not found" << std::endl;
+            }
+            
+        } else {
 			//continue; //WARNING doing "continue" skips everything left in this while loop. 
 			//TODO search for executable; PATH, or ., or /
 			//See main method for an example of searching PATH
@@ -150,7 +174,7 @@ int main (int argc, char **argv)
 				pathloc += ("/" + first_command);
 				//std::cout << pathloc << std::endl;
 				if(stat(pathloc.c_str(), &buf) == 0 && done == 0){
-                    printf("Inside Path Loop!\n");
+                    //printf("Inside Path Loop!\n");
 					int pid = fork();
 
 					//Child Process (Thread)
