@@ -42,8 +42,11 @@ int main (int argc, char **argv)
     printf("Welcome to OSShell! Please enter your commands ('exit' to quit).\n");
 
     std::vector<std::string> command_list; // to store command user types in, split into its variour parameters
-    char **command_list_exec; // command_list converted to an array of character arrays
-    char **command_history; 
+    char** command_list_exec; // command_list converted to an array of character arrays
+    char** command_history = new char*[128]; 
+    for(int i = 0; i < 128; i++) {
+    	command_history[i] = NULL; 
+    }
     int history_counter = 0;
 
 
@@ -79,7 +82,6 @@ int main (int argc, char **argv)
 		//gives back a null-terminated list of strings in given char**
 		vectorOfStringsToArrayOfCharArrays(command_list, &command_list_exec);
 		//gives back an array of char*s
-		//TODO create command_history based on the creation of command_list_exec
 		
 		//Echoing the (full and split) command...
 		std::cout << "[" << command << "]" << std::endl; 
@@ -94,12 +96,15 @@ int main (int argc, char **argv)
 		history_counter = (history_counter + 1) % 128;
 		
 		//printf("Recording command...\n");
-		//command_history[history_counter] = command; 
-		//TODO make sure this passes only the data
+		if(command_history[history_counter] == NULL) {
+			command_history[history_counter] = new char[command.length()]; 
+		}
+		strcpy(command_history[history_counter], command.c_str()); 
 		
 		//printf("Processing command...\n");
 		
-        first_command = command_list_exec[0];
+        if(command_list_exec[0] != NULL) first_command = command_list_exec[0];
+        
 		if(command == "") {
 			//Do nothing, reprompt
 			
@@ -108,25 +113,26 @@ int main (int argc, char **argv)
 			
 		} else if (first_command == "history") { 
 			//Print (or clear) history up to 128 (or X)
+			printf("Printing history...\n"); 
 						
 			// Setting limit (how many entries to print), and if applicable, clearing history
 			
 			int limit = 128; 
 			if(command_list_exec[1] != NULL && strcmp(command_list_exec[1], "clear") == 0) {
-				//TODO clear history (counter to 0, history var reset)
-				//(still need to finish designing the history variable, command_history)
 				for(int i = 0; i < 128; i++) {
 					command_history[i] = NULL; 
 				}
 				int limit = 0; 
 			} else {
 				if (command_list_exec[1] != NULL) {
-				//TODO check if number, then try to set that number as the limit
+					//TODO check if number, then try to set that number as the limit
                 }
 			}
 			
 			// Limit obtained, printing command_list (limit is 0 if clearing)
 			//loops in a circle, starting at counter, until either null or limit
+			//TODO oops, this starts at the counter and immediately hits the null. 
+			//TODO only need to check the last item for null
 			for(int i = 0; i < limit && command_history[(i+history_counter)%128] != NULL; i++) {
 				printf("%s\n", command_history[(i+history_counter)%128]); 
 			}
@@ -139,10 +145,10 @@ int main (int argc, char **argv)
             int done = 0;
 			for (i = 0; i < os_path_list.size(); i++)
 			{
-                struct stat buf;
-                std::string pathloc = os_path_list[i];
-                pathloc += ("/" + first_command);
-                //std::cout << pathloc << std::endl;
+				struct stat buf;
+				std::string pathloc = os_path_list[i];
+				pathloc += ("/" + first_command);
+				//std::cout << pathloc << std::endl;
 				if(stat(pathloc.c_str(), &buf) == 0 && done == 0){
                     printf("Inside Path Loop!\n");
 					int pid = fork();
@@ -168,7 +174,7 @@ int main (int argc, char **argv)
 		
 		printf("Freeing memory for `command_list_exec`...\n"); 
 		freeArrayOfCharArrays(command_list_exec, command_list.size() + 1);
-		printf("------\n");
+		printf("------ ");
 		printf("Made it through one loop\n"); 
 	}
 
