@@ -16,62 +16,38 @@ void recordCommand(std::string command, std::vector<std::string>& history, int* 
 
 int main (int argc, char **argv)
 {
-    // Get list of paths to binary executables
-    std::vector<std::string> os_path_list;
-    char* os_path = getenv("PATH");
-    splitString(os_path, ':', os_path_list);
-
-    
-    /************************************************************************************
-     *   Example code - remove in actual program                                        *
-     ************************************************************************************/
-    // Shows how to loop over the directories in the PATH environment variable
-    
-    int i;
-    for (i = 0; i < os_path_list.size(); i++)
-    {
-        printf("PATH[%2d]: %s\n", i, os_path_list[i].c_str());
-    }
-    
-    /************************************************************************************
-     *   End example code                                                               *
-     ************************************************************************************/
-
-
-    // Welcome message
-    printf("Welcome to OSShell! Please enter your commands ('exit' to quit).\n");
-
-    std::vector<std::string> command_list; // to store command user types in, split into its variour parameters
-    char** command_list_exec; // command_list converted to an array of character arrays
-    char** command_history = new char*[128]; 
-    for(int i = 0; i < 128; i++) {
-    	command_history[i] = NULL; 
-    }
-    int history_counter = 0;
-
-
-    // Repeat:
-    //  Print prompt for user input: "osshell> " (no newline)
-    //  Get user input for next command
-    //  If command is `exit` exit loop / quit program
-    //  If command is `history` print previous N commands
-    //  For all other commands, check if an executable by that name is in one of the PATH directories
-    //   If yes, execute it
-    //   If no, print error statement: "<command_name>: Error command not found" (do include newline)
-
-    bool running = true; 
-    while (running) {
-    	/*
-    	Recommended using the cis/stat library when checking if a file is available
-    	this will allow `struct stat;` to query file vs dir, rwx perms, etc (linux specific)
-    	Or std::filesystem
-    	But this is 2017 std, and makefile is setting to 2011 (-std=c++11); would need to edit
-    	Takes in string, can check "does this exist?" and if exists, "exec perms?"
-    	*/
+	// Get list of paths to binary executables
+	std::vector<std::string> os_path_list;
+	char* os_path = getenv("PATH");
+	splitString(os_path, ':', os_path_list);
+	
+	// Welcome message
+	printf("Welcome to OSShell! Please enter your commands ('exit' to quit).\n");
+	
+	std::vector<std::string> command_list; // to store command user types in, split into its variour parameters
+	char** command_list_exec; // command_list converted to an array of character arrays
+	char** command_history = new char*[128]; 
+	for(int i = 0; i < 128; i++) {
+		command_history[i] = NULL; 
+	}
+	int history_counter = 0;
+	
+	
+	// Repeat:
+	//  Print prompt for user input: "osshell> " (no newline)
+	//  Get user input for next command
+	//  If command is `exit` exit loop / quit program
+	//  If command is `history` print previous N commands
+	//  For all other commands, check if an executable by that name is in one of the PATH directories
+	//   If yes, execute it
+	//   If no, print error statement: "<command_name>: Error command not found" (do include newline)
+	
+	bool running = true; 
+	while (running) {
 		
 		//printf("Making command var...\n"); 
 		std::string command; 
-        std::string first_command;
+		std::string first_command;
 		
 		//printf("Prompting for input...\n"); 
 		printf("osshell> "); 
@@ -79,21 +55,7 @@ int main (int argc, char **argv)
 		
 		//printf("Splitting string...\n"); 
 		splitString(command, ' ', command_list); 
-		//gives back a null-terminated list of strings in given char**
 		vectorOfStringsToArrayOfCharArrays(command_list, &command_list_exec);
-		//gives back an array of char*s
-		
-		//Echoing the (full and split) command...
-		std::cout << "[" << command << "]" << std::endl; 
-		int i = 0;
-		while (command_list_exec[i] != NULL)
-		{
-			printf("CMD[%2d]: %s\n", i, command_list_exec[i]);
-			i++;
-		}
-		
-		//printf("Incrementing counter...\n");
-		history_counter = (history_counter + 1) % 128;
 		
 		//printf("Recording command...\n");
 		if(command_history[history_counter] == NULL) {
@@ -101,48 +63,61 @@ int main (int argc, char **argv)
 		}
 		strcpy(command_history[history_counter], command.c_str()); 
 		
+		//printf("Incrementing counter...\n");
+		history_counter = (history_counter + 1) % 128;
+		
 		//printf("Processing command...\n");
 		
         if(command_list_exec[0] != NULL) first_command = command_list_exec[0];
         
 		if(command == "") {
 			//Do nothing, reprompt
+			command_history[history_counter] = NULL; 
+			history_counter--; 
 			
 		} else if (first_command == "exit") {
 			exit(1);
 			
 		} else if (first_command == "history") { 
-			//Print (or clear) history up to 128 (or X)
-			printf("Printing history...\n"); 
-						
-			// Setting limit (how many entries to print), and if applicable, clearing history
+			//Print the history
 			
-			int limit = 128; 
-			if(command_list_exec[1] != NULL && strcmp(command_list_exec[1], "clear") == 0) {
-				for(int i = 0; i < 128; i++) {
-					command_history[i] = NULL; 
-				}
-				int limit = 0; 
+			//Set the defaults
+			int beginning, end; 
+			
+			end = history_counter - 1; 
+			
+			if(command_history[127] == NULL) {
+				beginning = 0; //If linear
 			} else {
-				if (command_list_exec[1] != NULL) {
-					//TODO check if number, then try to set that number as the limit
-                }
+				beginning = (history_counter + 1) % 128; //If looping
 			}
 			
-			// Limit obtained, printing command_list (limit is 0 if clearing)
-			//loops in a circle, starting at counter, until either null or limit
-			//TODO oops, this starts at the counter and immediately hits the null. 
-			//TODO only need to check the last item for null
-			for(int i = 0; i < limit && command_history[(i+history_counter)%128] != NULL; i++) {
-				printf("%s\n", command_history[(i+history_counter)%128]); 
+			//Check special settings
+			if(command_list_exec[1] != NULL) { 
+				if(strcmp(command_list_exec[1], "clear") == 0) {
+					//If it's a clear command
+					beginning = end; 
+					history_counter = 0; 
+					
+				} else if (isdigit(command_list_exec[1][0])) {
+					//If it's an offset command
+					beginning = end - atoi(command_list_exec[1]); 
+					
+				}
+			}
+			
+			//Print
+			if(beginning > end) end += 128; 
+			for(int i = beginning; i < end; i++) {
+				printf("%3d: %s\n", i+1, command_history[i%128]); 
 			}
 			
 		} else if (command.front() == '.' || command.front() == '/') {
+			//Search for and run the command
+			
             struct stat buffer;
             std::string commandLoc = first_command;
-            //printf("Hello, I am inside the confidtional!\n");
             if(stat(command.c_str(), &buffer) == 0){
-                    printf("Inside Path Loop!\n");
 					int pid = fork();
 
 					//Child Process (Thread)
@@ -162,9 +137,6 @@ int main (int argc, char **argv)
             }
             
         } else {
-			//continue; //WARNING doing "continue" skips everything left in this while loop. 
-			//TODO search for executable; PATH, or ., or /
-			//See main method for an example of searching PATH
 			int i;
             int done = 0;
 			for (i = 0; i < os_path_list.size(); i++)
@@ -172,9 +144,7 @@ int main (int argc, char **argv)
 				struct stat buf;
 				std::string pathloc = os_path_list[i];
 				pathloc += ("/" + first_command);
-				//std::cout << pathloc << std::endl;
 				if(stat(pathloc.c_str(), &buf) == 0 && done == 0){
-                    //printf("Inside Path Loop!\n");
 					int pid = fork();
 
 					//Child Process (Thread)
@@ -196,52 +166,11 @@ int main (int argc, char **argv)
 			}
 		}
 		
-		printf("Freeing memory for `command_list_exec`...\n"); 
 		freeArrayOfCharArrays(command_list_exec, command_list.size() + 1);
-		printf("------ ");
-		printf("Made it through one loop\n"); 
+		
 	}
-
-    
-    /************************************************************************************
-     *   Example code - remove in actual program                                        *
-     ************************************************************************************/
-    /*
-    // Shows how to split a command and prepare for the execv() function
-    std::string example_command = "ls -lh";
-    splitString(example_command, ' ', command_list);
-    vectorOfStringsToArrayOfCharArrays(command_list, &command_list_exec);
-    // use `command_list_exec` in the execv() function rather than looping and printing
-    i = 0;
-    while (command_list_exec[i] != NULL)
-    {
-        printf("CMD[%2d]: %s\n", i, command_list_exec[i]);
-        i++;
-    }
-    // free memory for `command_list_exec`
-    freeArrayOfCharArrays(command_list_exec, command_list.size() + 1);
-    printf("------\n");
-
-    // Second example command - reuse the `command_list` and `command_list_exec` variables
-    example_command = "echo \"Hello world\" I am alive!";
-    splitString(example_command, ' ', command_list);
-    vectorOfStringsToArrayOfCharArrays(command_list, &command_list_exec);
-    // use `command_list_exec` in the execv() function rather than looping and printing
-    i = 0;
-    while (command_list_exec[i] != NULL)
-    {
-        printf("CMD[%2d]: %s\n", i, command_list_exec[i]);
-        i++;
-    }
-    // free memory for `command_list_exec`
-    freeArrayOfCharArrays(command_list_exec, command_list.size() + 1);
-    printf("------\n");
-    */
-    /************************************************************************************
-     *   End example code                                                               *
-     ************************************************************************************/
-
-    return 0;
+	
+	return 0;
 }
 
 /*
